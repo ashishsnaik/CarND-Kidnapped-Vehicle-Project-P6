@@ -13,6 +13,10 @@
 #include <vector>
 #include "helper_functions.h"
 
+#include <iostream>
+using std::cout;
+using std::endl;
+
 struct Particle {
   int id;
   double x;
@@ -29,7 +33,8 @@ class ParticleFilter {
  public:
   // Constructor
   // @param num_particles Number of particles
-  ParticleFilter() : num_particles(0), is_initialized(false) {}
+  ParticleFilter(int num_particles=100) : num_particles(num_particles),
+                                          is_initialized(false) {}
 
   // Destructor
   ~ParticleFilter() {}

@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include "map.h"
+#include "Eigen/Dense"
 
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
@@ -246,6 +247,59 @@ inline bool read_landmark_data(std::string filename,
     observations.push_back(meas);
   }
   return true;
+}
+
+/**
+ * Transforms landmark measurements from vehicle coordinate system to map coordinate system.
+ * @param x_particle (map coords) partical's x position.
+ * @param y_particle (map coords) partical's y position.
+ * @param theta_particle partical's heading.
+ * @param x_obs (vehicle coords) x-coord of landmark observation.
+ * @param y_obs (vehicle coords) y-coord of landmark observation.
+ * @output Landmark measurement in map coordinate system
+ */
+inline Eigen::Vector3f homogeneous_transformation(double x_particle, double y_particle,
+                                                  double theta_particle, double x_obs,
+                                                  double y_obs){
+  // construct the homogeneous transformation matrix
+  Eigen::Matrix3f homogeneous_transform_matrix;
+  homogeneous_transform_matrix << cos(theta_particle), -sin(theta_particle), x_particle,
+                                  sin(theta_particle), cos(theta_particle), y_particle,
+                                  0, 0, 1;
+
+  // vector of input measurements in vehicle coordinate system
+  Eigen::Vector3f measurements;
+  measurements << x_obs, y_obs, 1;
+
+  // return the measurements in map coordinate system
+  return homogeneous_transform_matrix * measurements;
+
+}
+
+
+/**
+ * Calculates the mult-variate Gaussian probability.
+ * @param sig_x uncertainty (std. dev.) for x-measurement.
+ * @param sig_y uncertainty (std. dev.) for y-measurement.
+ * @param x_obs observation x-measurement.
+ * @param y_obs observation y-measurement.
+ * @param mu_x map x-measurement for landmark.
+ * @param mu_y map y-measurement for landmark.
+ * @output mult-variate Gaussian probability of the observation
+ */
+inline double multivariate_gaussian_prob(double sig_x, double sig_y, double x_obs,
+                                         double y_obs, double mu_x, double mu_y) {
+  // calculate normalization term
+  double gauss_norm = 1 / (2 * M_PI * sig_x * sig_y);
+
+  // calculate exponent
+  double exponent = (pow(x_obs - mu_x, 2) / (2 * pow(sig_x, 2))) +
+                    (pow(y_obs - mu_y, 2) / (2 * pow(sig_y, 2)));
+
+  // calculate weight/probability using normalization terms and exponent
+  double weight = gauss_norm * exp(-exponent);
+
+  return weight;
 }
 
 #endif  // HELPER_FUNCTIONS_H_
